@@ -56,8 +56,8 @@ static git_revwalk *gbr_revwalk_setup_fromto(git_repository *repo, git_oid *base
 	}
 
 	git_revwalk_sorting(walker, GIT_SORT_REVERSE);
-	git_revwalk_hide(walker, base);
 	git_revwalk_push(walker, head);
+	git_revwalk_hide(walker, base);
 
 	return walker;
 }
