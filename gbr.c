@@ -9,6 +9,8 @@
 
 #include <git2.h>
 
+#include "color.h"
+
 #define HOPELESSLY_DIVERGED 100
 
 static int abbrev_commit = GIT_OID_HEXSZ;
@@ -156,6 +158,7 @@ static int gbr_walk_next(struct gbr_walk_context *ctx)
 static void do_walk(git_repository *repo, const git_oid *o1, const git_oid *o2)
 {
 	struct gbr_walk_context *ctx;
+	enum color c = NONE;
 
 	ctx = gbr_walk_init(repo, o1, o2);
 	if (ctx == NULL) {
@@ -170,12 +173,25 @@ static void do_walk(git_repository *repo, const git_oid *o1, const git_oid *o2)
 		;
 	}
 
+        if (ctx->count[0] == 0) {
+                if (ctx->count[1] == 0) {
+                        /* Nobody's ahead */
+                        c = GREEN;
+                } else {
+                        /* Remote is ahead */
+                        c = YELLOW;
+                }
+        } else if (ctx->count[1] > 0) {
+                /* Diverged */
+                c = RED;
+        }
+
 	/* TODO: DUMP INFO */
-	printf(":%s%d/%s%d",
-	       ctx->count[0] > HOPELESSLY_DIVERGED ? ">" : "",
-	       ctx->count[0],
-	       ctx->count[1] > HOPELESSLY_DIVERGED ? ">" : "",
-	       ctx->count[1]);
+	c_fprintf(c, stdout, ":%s%d/%s%d",
+                  ctx->count[0] > HOPELESSLY_DIVERGED ? ">" : "",
+                  ctx->count[0],
+                  ctx->count[1] > HOPELESSLY_DIVERGED ? ">" : "",
+                  ctx->count[1]);
 
 	gbr_walk_free(ctx);
 }
