@@ -212,7 +212,8 @@ static void dump_matching_branch(git_repository *repo, const char *remote, const
 	err = git_revparse_single(&obj, repo, full_remote);
 
 	switch (err) {
-	case -3:
+	case GIT_ENOTFOUND:
+		/* FIXME: Log this once we have --verbose */
 		break;
 	case 0:
 		printf(" %s:%s", remote, gbr_sha(&sha, git_object_id(obj)));
