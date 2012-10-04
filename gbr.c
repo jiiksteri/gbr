@@ -333,6 +333,7 @@ int main(int argc, char **argv)
 
 	err = gbr_repo_open(&repo);
 	if (err != 0) {
+		gbr_perror("gbr_repo_open()");
 		return err;
 	}
 
