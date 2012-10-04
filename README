@@ -1,0 +1,41 @@
+
+gbr - A single-glance git branch status viewer toy thing.
+=====================================================
+
+
+Shows your branch status with respect to matching branches in your
+configured remotes. Think of it as a slightly confused git branch -v
+with colors.
+
+And yes, it would be completely doable with a bit of tooling on top of
+command-line git, but I wanted to give libgit2 a spin and come up with
+something useful (to mmmmeeee) as a side-effect.
+
+
+Building
+--------
+
+Rrrriight, ok.
+
+For libgit2 your best bet is building your own off the libgit2
+repository and adjusting the Makefile here accordingly. Pick your
+excuse between libgit2 moving too fast and your distro packagers
+moving too slow.
+
+After that it's just 'make'.
+
+There is no install target, but do not worry. You can just copy/link
+the gbr binary to your $HOME/bin or wherever and it'll work, provided
+you either
+
+ a) get rid of the -rpath trickery we have in the Makefile, or
+ b) satisfy its expectations forever and ever
+
+It's of course possible that you have a sanely packaged and recent
+libgit2 and you can just set libgit2_CFLAGS and libgit2_LDFLAGS
+using pkg-config in the makefile.
+
+I don't.
+
+Libgit2 is available at http://libgit2.github.com/
+
