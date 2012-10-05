@@ -94,10 +94,7 @@ struct gbr_walk_context *gbr_walk_init(git_repository *repo,
 
 	memset(ctx, 0, sizeof(*ctx));
 
-	/* The docs say o1 and o2 have been since made const for git_merge_base().
-	 * My version still has them notsomuch.
-	 */
-	err = git_merge_base(&ctx->base, repo, (git_oid *)o1, (git_oid *)o2);
+	err = git_merge_base(&ctx->base, repo, o1, o2);
 	if (err != 0) {
 		gbr_walk_free(ctx);
 		gbr_perror("git_merge_base()");
@@ -155,8 +152,9 @@ static int gbr_walk_next(struct gbr_walk_context *ctx)
 		&& (ctx->err[0] == 0 || ctx->err[1] == 0);
 }
 
-static void do_walk(git_repository *repo, const git_oid *o1, const git_oid *o2)
+static void do_walk(git_repository *repo, const char *branch, const git_oid *o1, const git_oid *o2)
 {
+	struct gbr_sha sha;
 	struct gbr_walk_context *ctx;
 	enum color c = NONE;
 
@@ -187,7 +185,8 @@ static void do_walk(git_repository *repo, const git_oid *o1, const git_oid *o2)
         }
 
 	/* TODO: DUMP INFO */
-	c_fprintf(c, stdout, ":%s%d/%s%d",
+	c_fprintf(c, stdout, " %s:%s:%s%d/%s%d",
+                  branch, gbr_sha(&sha, o2),
                   ctx->count[0] > HOPELESSLY_DIVERGED ? ">" : "",
                   ctx->count[0],
                   ctx->count[1] > HOPELESSLY_DIVERGED ? ">" : "",
@@ -200,7 +199,6 @@ static void do_walk(git_repository *repo, const git_oid *o1, const git_oid *o2)
 static void dump_matching_branch(git_repository *repo, const char *remote, const void *arg)
 {
 	char full_remote[512];
-	struct gbr_sha sha;
 	const char *local = arg;
 	git_object *obj;
 	int err;
@@ -216,7 +214,6 @@ static void dump_matching_branch(git_repository *repo, const char *remote, const
 		/* FIXME: Log this once we have --verbose */
 		break;
 	case 0:
-		printf(" %s:%s", remote, gbr_sha(&sha, git_object_id(obj)));
 		break;
 	default:
 		printf(" %s:%d", remote, err);
@@ -231,7 +228,7 @@ static void dump_matching_branch(git_repository *repo, const char *remote, const
 		err = git_revparse_single(&local_obj, repo, local);
 		if (err == 0) {
 			/* fprintf(stderr, "%s(): Looking at %s\n", __func__, local); */
-			do_walk(repo, git_object_id(local_obj), git_object_id(obj));
+			do_walk(repo, remote, git_object_id(local_obj), git_object_id(obj));
 			git_object_free(local_obj);
 		} else {
 			/* How could the local object lookup fail _here_? */
