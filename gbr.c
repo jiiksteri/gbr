@@ -13,7 +13,7 @@
 
 #define HOPELESSLY_DIVERGED 100
 
-static int abbrev_commit = GIT_OID_HEXSZ;
+static int abbrev_commit = 8;
 
 struct gbr_dump_context {
 	git_repository *repo;
@@ -294,10 +294,10 @@ static struct option lopts[] = {
 		.val = 'v',
 	},
 	{
-		.name = "abbrev-commit",
-		.has_arg = no_argument,
+		.name = "abbrev",
+		.has_arg = required_argument,
 		.flag = NULL,
-		.val = 's',
+		.val = 'a'
 	},
 	{
 		.name= NULL,
@@ -313,12 +313,19 @@ int main(int argc, char **argv)
 	git_repository *repo;
 	struct gbr_dump_context dump_context;
 	int err;
-	int ch;
+	int ch, n;
 
-	while ((ch = getopt_long(argc, argv, "sv", lopts, NULL)) != -1) {
+	while ((ch = getopt_long_only(argc, argv, "", lopts, NULL)) != -1) {
 		switch (ch) {
-		case 's':
-			abbrev_commit = 8;
+		case 'a':
+			n = atoi(optarg);
+			if (n < 8) {
+				n = 8;
+			}
+			if (n > GIT_OID_HEXSZ) {
+				n = GIT_OID_HEXSZ;
+			}
+			abbrev_commit = n;
 			break;
 		case 'v':
 			dump_version();
