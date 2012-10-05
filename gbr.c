@@ -152,11 +152,39 @@ static int gbr_walk_next(struct gbr_walk_context *ctx)
 		&& (ctx->err[0] == 0 || ctx->err[1] == 0);
 }
 
+static void dump_info(const char *branch, const char *sha, int c0, int c1)
+{
+	int div0, div1;
+	enum color c = NONE;
+
+	div0 = c0 > HOPELESSLY_DIVERGED;
+	div1 = c1 > HOPELESSLY_DIVERGED;
+
+        if (c0 == 0) {
+                if (c1 == 0) {
+                        /* Nobody's ahead */
+                        c = GREEN;
+                } else {
+                        /* Remote is ahead */
+                        c = YELLOW;
+                }
+        } else if (c1 > 0) {
+                /* Diverged */
+                c = RED;
+        }
+
+	c_fprintf(c, stdout, " %s:%s:%s%d/%s%d",
+		  branch, sha,
+		  div0 ? ">" : "",
+		  div0 ? HOPELESSLY_DIVERGED : c0,
+		  div1 ? ">" : "",
+		  div1 ? HOPELESSLY_DIVERGED : c1);
+}
+
 static void do_walk(git_repository *repo, const char *branch, const git_oid *o1, const git_oid *o2)
 {
 	struct gbr_sha sha;
 	struct gbr_walk_context *ctx;
-	enum color c = NONE;
 
 	ctx = gbr_walk_init(repo, o1, o2);
 	if (ctx == NULL) {
@@ -171,26 +199,8 @@ static void do_walk(git_repository *repo, const char *branch, const git_oid *o1,
 		;
 	}
 
-        if (ctx->count[0] == 0) {
-                if (ctx->count[1] == 0) {
-                        /* Nobody's ahead */
-                        c = GREEN;
-                } else {
-                        /* Remote is ahead */
-                        c = YELLOW;
-                }
-        } else if (ctx->count[1] > 0) {
-                /* Diverged */
-                c = RED;
-        }
-
-	/* TODO: DUMP INFO */
-	c_fprintf(c, stdout, " %s:%s:%s%d/%s%d",
-                  branch, gbr_sha(&sha, o2),
-                  ctx->count[0] > HOPELESSLY_DIVERGED ? ">" : "",
-                  ctx->count[0],
-                  ctx->count[1] > HOPELESSLY_DIVERGED ? ">" : "",
-                  ctx->count[1]);
+	dump_info(branch, gbr_sha(&sha, o2),
+		  ctx->count[0], ctx->count[1]);
 
 	gbr_walk_free(ctx);
 }
