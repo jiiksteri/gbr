@@ -17,6 +17,9 @@ static int abbrev_commit = 8;
 
 struct gbr_dump_context {
 	git_repository *repo;
+
+	struct git_object *local_obj;
+	const char *local_name;
 };
 
 struct gbr_sha {
@@ -215,12 +218,13 @@ static void do_walk(git_repository *repo, const char *branch, const git_oid *o1,
 static void dump_matching_branch(git_repository *repo, const char *remote, const void *arg)
 {
 	char full_remote[512];
-	const char *local = arg;
+	const struct gbr_dump_context *ctx = arg;
 	git_object *obj;
 	int err;
 
 
-	snprintf(full_remote, sizeof(full_remote), "remotes/%s/%s", remote, local);
+	snprintf(full_remote, sizeof(full_remote), "remotes/%s/%s",
+		 remote,  ctx->local_name);
 
 	obj = NULL;
 	err = git_revparse_single(&obj, repo, full_remote);
@@ -237,15 +241,9 @@ static void dump_matching_branch(git_repository *repo, const char *remote, const
 	}
 
 	if (err == 0) {
-		/* FIXME: Pass the object for the callback
-		 * so we don't need the lookup.
-		 */
-		git_object *local_obj;
-		err = git_revparse_single(&local_obj, repo, local);
 		if (err == 0) {
 			/* fprintf(stderr, "%s(): Looking at %s\n", __func__, local); */
-			do_walk(repo, remote, git_object_id(local_obj), git_object_id(obj));
-			git_object_free(local_obj);
+			do_walk(repo, remote, git_object_id(ctx->local_obj), git_object_id(obj));
 		} else {
 			/* How could the local object lookup fail _here_? */
 			gbr_perror("dump_matching_branch()");
@@ -276,16 +274,16 @@ static int dump_branch(const char *name, git_branch_t type, void *_ctx)
 {
 	struct gbr_sha sha;
 	struct gbr_dump_context *ctx = _ctx;
-	git_object *local;
 	int err;
 
 	printf("%s", name);
 
-	err = git_revparse_single(&local, ctx->repo, name);
+	ctx->local_name = name;
+	err = git_revparse_single(&ctx->local_obj, ctx->repo, name);
 	if (err == 0) {
-		printf(" %s", gbr_sha(&sha, git_object_id(local)));
-		gbr_for_each_remote(ctx->repo, dump_matching_branch, name);
-		git_object_free(local);
+		printf(" %s", gbr_sha(&sha, git_object_id(ctx->local_obj)));
+		gbr_for_each_remote(ctx->repo, dump_matching_branch, ctx);
+		git_object_free(ctx->local_obj);
 	} else {
 		printf(" ERROR [%d] %s", err, giterr_last()->message);
 	}
