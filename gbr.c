@@ -186,6 +186,12 @@ static void do_walk(git_repository *repo, const char *branch, const git_oid *o1,
 	struct gbr_sha sha;
 	struct gbr_walk_context *ctx;
 
+	if (git_oid_cmp(o1, o2) == 0) {
+		/* Skip the costly walking */
+		dump_info(branch, gbr_sha(&sha, o2), 0, 0);
+		return;
+	}
+
 	ctx = gbr_walk_init(repo, o1, o2);
 	if (ctx == NULL) {
 		return;
