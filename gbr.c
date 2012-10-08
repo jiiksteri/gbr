@@ -10,6 +10,7 @@
 #include <git2.h>
 
 #include "color.h"
+#include "re.h"
 
 #define HOPELESSLY_DIVERGED 100
 
@@ -17,6 +18,7 @@ static int abbrev_commit = 8;
 
 struct gbr_dump_context {
 	git_repository *repo;
+	struct gbr_re *branch_re;
 
 	struct git_object *local_obj;
 	const char *local_name;
@@ -276,6 +278,10 @@ static int dump_branch(const char *name, git_branch_t type, void *_ctx)
 	struct gbr_dump_context *ctx = _ctx;
 	int err;
 
+	if (ctx->branch_re != NULL && gbr_re_match(ctx->branch_re, name) != 0) {
+		return 0;
+	}
+
 	printf("%s", name);
 
 	ctx->local_name = name;
@@ -314,12 +320,19 @@ static struct option lopts[] = {
 		.val = 'a'
 	},
 	{
+		.name = "branch-re",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'b',
+	},
+	{
 		.name= NULL,
 		.has_arg = 0,
 		.flag = NULL,
 		.val = 0,
 	},
 };
+
 
 int main(int argc, char **argv)
 {
@@ -329,6 +342,9 @@ int main(int argc, char **argv)
 	int err;
 	int ch, n;
 
+	memset(&dump_context, 0, sizeof(dump_context));
+
+	err = 0;
 	while ((ch = getopt_long_only(argc, argv, "", lopts, NULL)) != -1) {
 		switch (ch) {
 		case 'a':
@@ -343,9 +359,17 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			dump_version();
+			/* We leak memory if someone gave --branch-re */
 			return 0;
 			break;
+		case 'b':
+			err = gbr_re_add(&dump_context.branch_re, optarg);
+			if (err != 0) {
+				return err;
+			}
+			break;
 		default:
+			/* We leak memory if someone gave --branch-re */
 			return EXIT_FAILURE;
 		}
 	}
@@ -363,5 +387,6 @@ int main(int argc, char **argv)
 	}
 
 	git_repository_free(repo);
+	gbr_re_free(dump_context.branch_re);
 	return err;
 }
