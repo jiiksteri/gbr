@@ -15,6 +15,7 @@
 #define HOPELESSLY_DIVERGED 100
 
 static int abbrev_commit = 8;
+static int prune;
 
 struct gbr_dump_context {
 	git_repository *repo;
@@ -22,6 +23,7 @@ struct gbr_dump_context {
 
 	struct git_object *local_obj;
 	const char *local_name;
+	int uptodate_remotes;
 };
 
 struct gbr_sha {
@@ -186,7 +188,25 @@ static void dump_info(const char *branch, const char *sha, int c0, int c1)
 		  div1 ? HOPELESSLY_DIVERGED : c1);
 }
 
-static void do_walk(git_repository *repo, const char *branch, const git_oid *o1, const git_oid *o2)
+static void do_prune(git_repository *repo, const char *name)
+{
+	git_reference *branch;
+	int err;
+
+	err = git_branch_lookup(&branch, repo, name, GIT_BRANCH_LOCAL);
+	if (err != 0) {
+		gbr_perror("git_branch_lookup()");
+		return;
+	}
+
+	if (git_branch_delete(branch) != 0) {
+		gbr_perror("git_branch_delete()");
+		git_reference_free(branch);
+	}
+}
+
+static void do_walk(struct gbr_dump_context *dump_ctx,
+		    const char *branch, const git_oid *o1, const git_oid *o2)
 {
 	struct gbr_sha sha;
 	struct gbr_walk_context *ctx;
@@ -194,10 +214,11 @@ static void do_walk(git_repository *repo, const char *branch, const git_oid *o1,
 	if (git_oid_cmp(o1, o2) == 0) {
 		/* Skip the costly walking */
 		dump_info(branch, gbr_sha(&sha, o2), 0, 0);
+		dump_ctx->uptodate_remotes++;
 		return;
 	}
 
-	ctx = gbr_walk_init(repo, o1, o2);
+	ctx = gbr_walk_init(dump_ctx->repo, o1, o2);
 	if (ctx == NULL) {
 		return;
 	}
@@ -214,13 +235,18 @@ static void do_walk(git_repository *repo, const char *branch, const git_oid *o1,
 		  ctx->count[0], ctx->count[1]);
 
 	gbr_walk_free(ctx);
+
+	if (ctx->count[0] == 0) {
+		/* 0 Diverging commits here. */
+		dump_ctx->uptodate_remotes++;
+	}
 }
 
 
-static void dump_matching_branch(git_repository *repo, const char *remote, const void *arg)
+static void dump_matching_branch(git_repository *repo, const char *remote, void *arg)
 {
 	char full_remote[512];
-	const struct gbr_dump_context *ctx = arg;
+	struct gbr_dump_context *ctx = arg;
 	git_object *obj;
 	int err;
 
@@ -245,7 +271,7 @@ static void dump_matching_branch(git_repository *repo, const char *remote, const
 	if (err == 0) {
 		if (err == 0) {
 			/* fprintf(stderr, "%s(): Looking at %s\n", __func__, local); */
-			do_walk(repo, remote, git_object_id(ctx->local_obj), git_object_id(obj));
+			do_walk(ctx, remote, git_object_id(ctx->local_obj), git_object_id(obj));
 		} else {
 			/* How could the local object lookup fail _here_? */
 			gbr_perror("dump_matching_branch()");
@@ -256,8 +282,8 @@ static void dump_matching_branch(git_repository *repo, const char *remote, const
 }
 
 static void gbr_for_each_remote(git_repository *repo,
-				void (*cb)(git_repository *repo, const char *remote, const void *arg),
-				const void *arg)
+				void (*cb)(git_repository *repo, const char *remote, void *arg),
+				void *arg)
 {
 	git_strarray remotes;
 	int i;
@@ -285,6 +311,7 @@ static int dump_branch(const char *name, git_branch_t type, void *_ctx)
 	printf("%s", name);
 
 	ctx->local_name = name;
+	ctx->uptodate_remotes = 0;
 	err = git_revparse_single(&ctx->local_obj, ctx->repo, name);
 	if (err == 0) {
 		printf(" %s", gbr_sha(&sha, git_object_id(ctx->local_obj)));
@@ -295,6 +322,11 @@ static int dump_branch(const char *name, git_branch_t type, void *_ctx)
 	}
 
 	printf("\n");
+
+	if (prune && ctx->uptodate_remotes > 0) {
+		do_prune(ctx->repo, name);
+	}
+
 	return err;
 }
 
@@ -305,6 +337,8 @@ static void dump_version(void)
 	printf("gbr using libgit2 %d.%d.%d\n",
 	       major, minor, rev);
 }
+
+
 
 static struct option lopts[] = {
 	{
@@ -324,6 +358,12 @@ static struct option lopts[] = {
 		.has_arg = required_argument,
 		.flag = NULL,
 		.val = 'b',
+	},
+	{
+		.name = "prune",
+		.has_arg = no_argument,
+		.flag = NULL,
+		.val = 'p',
 	},
 	{
 		.name= NULL,
@@ -368,10 +408,22 @@ int main(int argc, char **argv)
 				return err;
 			}
 			break;
+		case 'p':
+			prune++;
+			break;
 		default:
 			/* We leak memory if someone gave --branch-re */
 			return EXIT_FAILURE;
 		}
+	}
+
+	/*
+	 * Don't allow pruning unless there's a --branch-re.
+	 * For your own safety.
+	 */
+	if (prune > 0 && dump_context.branch_re == NULL) {
+		fprintf(stderr, "Ignoring --prune as --branch-re is not set\n");
+		prune = 0;
 	}
 
 	err = gbr_repo_open(&repo);
