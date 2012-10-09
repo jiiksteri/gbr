@@ -165,7 +165,7 @@ static int gbr_walk_next(struct gbr_walk_context *ctx)
 		&& (ctx->err[0] == 0 || ctx->err[1] == 0);
 }
 
-static void dump_info(const char *branch, const char *sha, int c0, int c1)
+static void dump_info(const char *remote, const char *sha, int c0, int c1)
 {
 	int div0, div1;
 	enum color c = NONE;
@@ -187,7 +187,7 @@ static void dump_info(const char *branch, const char *sha, int c0, int c1)
         }
 
 	c_fprintf(c, stdout, " %s:%s:%s%d/%s%d",
-		  branch, sha,
+		  remote, sha,
 		  div0 ? ">" : "",
 		  div0 ? HOPELESSLY_DIVERGED : c0,
 		  div1 ? ">" : "",
@@ -212,14 +212,14 @@ static void do_prune(git_repository *repo, const char *name)
 }
 
 static void do_walk(struct gbr_dump_context *dump_ctx,
-		    const char *branch, const git_oid *o1, const git_oid *o2)
+		    const char *remote, const git_oid *o1, const git_oid *o2)
 {
 	struct gbr_sha sha;
 	struct gbr_walk_context *ctx;
 
 	if (git_oid_cmp(o1, o2) == 0) {
 		/* Skip the costly walking */
-		dump_info(branch, gbr_sha(&sha, o2), 0, 0);
+		dump_info(remote, gbr_sha(&sha, o2), 0, 0);
 		dump_ctx->uptodate_remotes++;
 		return;
 	}
@@ -237,7 +237,7 @@ static void do_walk(struct gbr_dump_context *dump_ctx,
 		;
 	}
 
-	dump_info(branch, gbr_sha(&sha, o2),
+	dump_info(remote, gbr_sha(&sha, o2),
 		  ctx->count[0], ctx->count[1]);
 
 	gbr_walk_free(ctx);
