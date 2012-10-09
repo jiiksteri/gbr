@@ -103,8 +103,14 @@ struct gbr_walk_context *gbr_walk_init(git_repository *repo,
 
 	err = git_merge_base(&ctx->base, repo, o1, o2);
 	if (err != 0) {
+		/*
+		 * git_merge_base() may return GIT_ENOTFOUND and not
+		 * set giterr_last(). Let's not treat it as an error.
+		 */
+		if (err != GIT_ENOTFOUND) {
+			gbr_perror("git_merge_base()");
+		}
 		gbr_walk_free(ctx);
-		gbr_perror("git_merge_base()");
 		return NULL;
 	}
 
