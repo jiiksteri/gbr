@@ -360,12 +360,6 @@ static struct option lopts[] = {
 		.val = 'a'
 	},
 	{
-		.name = "branch-re",
-		.has_arg = required_argument,
-		.flag = NULL,
-		.val = 'b',
-	},
-	{
 		.name = "prune",
 		.has_arg = no_argument,
 		.flag = NULL,
@@ -387,6 +381,7 @@ int main(int argc, char **argv)
 	struct gbr_dump_context dump_context;
 	int err;
 	int ch, n;
+	int branches_limited;
 
 	memset(&dump_context, 0, sizeof(dump_context));
 
@@ -405,30 +400,32 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			dump_version();
-			/* We leak memory if someone gave --branch-re */
 			return 0;
-			break;
-		case 'b':
-			err = gbr_re_add(&dump_context.branch_re, optarg);
-			if (err != 0) {
-				return err;
-			}
 			break;
 		case 'p':
 			prune++;
 			break;
 		default:
-			/* We leak memory if someone gave --branch-re */
 			return EXIT_FAILURE;
 		}
 	}
 
+	branches_limited = 0;
+	while (optind < argc) {
+		err = gbr_re_add(&dump_context.branch_re, argv[optind++]);
+		if (err != 0) {
+			gbr_re_free(dump_context.branch_re);
+			return err;
+		}
+		branches_limited++;
+	}
+
 	/*
-	 * Don't allow pruning unless there's a --branch-re.
-	 * For your own safety.
+	 * Don't allow pruning unless there's a branch-limiting regexp.
+	 * This is just a safety measure.
 	 */
-	if (prune > 0 && dump_context.branch_re == NULL) {
-		fprintf(stderr, "Ignoring --prune as --branch-re is not set\n");
+	if (prune > 0 && branches_limited == 0) {
+		fprintf(stderr, "Ignoring --prune as branches are not limited\n");
 		prune = 0;
 	}
 
