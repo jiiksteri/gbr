@@ -30,14 +30,15 @@ struct gbr_sha {
 	char sha[GIT_OID_HEXSZ+1];
 };
 
-static int gbr_repo_open(git_repository **repo)
+static int gbr_repo_open(git_repository **repo, char *path, size_t path_size)
 {
-	char path[GIT_PATH_MAX];
 	int err;
 
-	err = git_repository_discover(path, GIT_PATH_MAX, ".", 0, NULL);
-	if (err != 0) {
-		return err;
+	if (path[0] == '\0') {
+		err = git_repository_discover(path, path_size, ".", 0, NULL);
+		if (err != 0) {
+			return err;
+		}
 	}
 
 	return git_repository_open(repo, path);
@@ -366,6 +367,12 @@ static struct option lopts[] = {
 		.val = 'p',
 	},
 	{
+		.name = "repository",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'r',
+	},
+	{
 		.name= NULL,
 		.has_arg = 0,
 		.flag = NULL,
@@ -376,7 +383,7 @@ static struct option lopts[] = {
 
 int main(int argc, char **argv)
 {
-
+	char path[GIT_PATH_MAX];
 	git_repository *repo;
 	struct gbr_dump_context dump_context;
 	int err;
@@ -384,6 +391,7 @@ int main(int argc, char **argv)
 	int branches_limited;
 
 	memset(&dump_context, 0, sizeof(dump_context));
+	path[0] = '\0';
 
 	err = 0;
 	while ((ch = getopt_long_only(argc, argv, "", lopts, NULL)) != -1) {
@@ -404,6 +412,9 @@ int main(int argc, char **argv)
 			break;
 		case 'p':
 			prune++;
+			break;
+		case 'r':
+			strncpy(path, optarg, sizeof(path))[GIT_PATH_MAX-1] = '\0';
 			break;
 		default:
 			return EXIT_FAILURE;
@@ -429,7 +440,7 @@ int main(int argc, char **argv)
 		prune = 0;
 	}
 
-	err = gbr_repo_open(&repo);
+	err = gbr_repo_open(&repo, path, sizeof(path));
 	if (err != 0) {
 		gbr_perror("gbr_repo_open()");
 		return err;
