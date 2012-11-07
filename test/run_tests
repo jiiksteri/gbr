@@ -1,0 +1,80 @@
+#!/bin/bash
+
+set -e
+
+if [ $TERM != 'dumb' ]; then
+    GREEN="\033[32m"
+    RED="\033[31m";
+    RESET="\033[0m";
+fi
+
+QUIET=-q
+
+repo=$(mktemp --tmpdir --directory gbr.tmp.XXXXXXXXXX);
+remote=$(mktemp --tmpdir --directory gbr.tmp.XXXXXXXXXX);
+
+trap "rm -rf $repo $remote a" EXIT;
+
+git --git-dir=$repo/.git init $QUIET;
+git --git-dir=$remote --bare init $QUIET;
+git --git-dir $repo/.git remote add remote $remote;
+
+function die {
+    echo -e "${RED}$*${RESET}\033[0m" >&2
+    exit 1;
+}
+
+function green() {
+    echo -e ${GREEN}$*${RESET}
+}
+
+function gbr() {
+    $(dirname $0)/../gbr --abbrev=100 --repository=$repo "$@"
+}
+
+function do_git() {
+    git --git-dir=$repo/.git "$@";
+}
+
+function get_sha() {
+    do_git log -1 --oneline --no-abbrev-commit $1 --|awk '{print $1}';
+}
+
+do_git checkout -b a;
+
+# Both up-to-date
+echo 'a' > a;
+do_git add a;
+do_git commit $QUIET -m 'a';
+do_git push $QUIET remote a:a
+do_git branch $QUIET --set-upstream-to remote/a a;
+head=$(get_sha HEAD);
+expected="a $head remote:$head:0/0";
+actual=$(gbr)
+[ "$actual" = "$expected" ] || die "$actual != $expected";
+green Both up-to-date OK
+
+# Local ahead
+do_git push $QUIET remote a:b;
+do_git checkout $QUIET b;
+echo "aa" >> a;
+do_git add a;
+do_git commit $QUIET -m 'aa';
+head=$(get_sha b);
+remote_head=$(get_sha remote/b);
+expected="b $head remote:$remote_head:1/0"
+actual=$(gbr b);
+[ "$actual" = "$expected" ] || die "$actual != $expected";
+green Local ahead OK OK
+
+# Remote ahead
+do_git fetch remote;
+do_git push $QUIET remote b:a;
+do_git checkout $QUIET a;
+head=$(get_sha a);
+remote_head=$(get_sha remote/a);
+expected="a $head remote:$remote_head:0/1"
+actual=$(gbr a);
+#echo $actual;
+[ "$actual" = "$expected" ] || die "$actual != $expected";
+green "Remote ahead OK"

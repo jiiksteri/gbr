@@ -15,7 +15,7 @@ libgit2_LDFLAGS = -L$(LIBGIT2_PREFIX)/lib -Wl,--rpath=$(LIBGIT2_PREFIX)/lib -lgi
 CFLAGS += -g -D_GNU_SOURCE -Wall -Werror $(libgit2_CFLAGS)
 LDFLAGS += $(libgit2_LDFLAGS)
 
-.PHONY: all clean
+.PHONY: all clean test
 
 all: $(PROG)
 clean:
@@ -24,3 +24,6 @@ clean:
 
 $(PROG): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+
+test:
+	cd test && $(MAKE)
