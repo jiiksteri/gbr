@@ -346,6 +346,35 @@ static void dump_version(void)
 }
 
 
+static int gbr_branch_foreach(git_repository *repo, git_branch_t type, int (*cb)(const char *name, git_branch_t type, void *cb_data), void *cb_data)
+{
+	git_branch_iterator *iter;
+	git_reference *ref;
+	const char *name;
+	int err;
+
+	iter = NULL;
+	err = git_branch_iterator_new(&iter, repo, type);
+	while (err == 0) {
+		if ((err = git_branch_next(&ref, &type, iter)) != 0) {
+			break;
+		}
+		if ((err = git_branch_name(&name, ref)) != 0) {
+			break;
+		}
+		err = cb(name, type, cb_data);
+	}
+
+	if (iter != NULL) {
+		git_branch_iterator_free(iter);
+	}
+
+	if (err == GIT_ITEROVER) {
+		err = 0;
+	}
+
+	return err;
+}
 
 static struct option lopts[] = {
 	{
@@ -447,7 +476,7 @@ int main(int argc, char **argv)
 	}
 
 	dump_context.repo = repo;
-	err = git_branch_foreach(repo, GIT_BRANCH_LOCAL, dump_branch, &dump_context);
+	err = gbr_branch_foreach(repo, GIT_BRANCH_LOCAL, dump_branch, &dump_context);
 	if (err != 0) {
 		gbr_perror("git_branch_foreach()");
 	}
