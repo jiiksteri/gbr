@@ -32,14 +32,28 @@ struct gbr_sha {
 
 static int gbr_repo_open(git_repository **repo, char *path, size_t path_size)
 {
+	git_buf buf = { .ptr = NULL };
 	int err;
 
+	if (git_buf_set(&buf, path, path_size) != 0) {
+		return ENOMEM;
+	}
+
 	if (path[0] == '\0') {
-		err = git_repository_discover(path, path_size, ".", 0, NULL);
+		err = git_repository_discover(&buf, ".", 0, NULL);
 		if (err != 0) {
+			git_buf_free(&buf);
 			return err;
 		}
 	}
+
+	if (buf.size > path_size) {
+		git_buf_free(&buf);
+		return ENOMEM;
+	}
+
+	memcpy(path, buf.ptr, buf.size);
+	git_buf_free(&buf);
 
 	return git_repository_open(repo, path);
 }
