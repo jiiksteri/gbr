@@ -30,32 +30,18 @@ struct gbr_sha {
 	char sha[GIT_OID_HEXSZ+1];
 };
 
-static int gbr_repo_open(git_repository **repo, char *path, size_t path_size)
+static int gbr_repo_open(git_repository **repo, git_buf *path)
 {
-	git_buf buf = { .ptr = NULL };
 	int err;
 
-	if (git_buf_set(&buf, path, path_size) != 0) {
-		return ENOMEM;
-	}
-
-	if (path[0] == '\0') {
-		err = git_repository_discover(&buf, ".", 0, NULL);
+	if (path->ptr == NULL) {
+		err = git_repository_discover(path, ".", 0, NULL);
 		if (err != 0) {
-			git_buf_free(&buf);
 			return err;
 		}
 	}
 
-	if (buf.size > path_size) {
-		git_buf_free(&buf);
-		return ENOMEM;
-	}
-
-	memcpy(path, buf.ptr, buf.size);
-	git_buf_free(&buf);
-
-	return git_repository_open(repo, path);
+	return git_repository_open(repo, path->ptr);
 }
 
 static void gbr_perror(const char *prefix)
@@ -426,7 +412,7 @@ static struct option lopts[] = {
 
 int main(int argc, char **argv)
 {
-	char path[GIT_PATH_MAX];
+	git_buf path = { .ptr = NULL };
 	git_repository *repo;
 	struct gbr_dump_context dump_context;
 	int err;
@@ -434,7 +420,6 @@ int main(int argc, char **argv)
 	int branches_limited;
 
 	memset(&dump_context, 0, sizeof(dump_context));
-	path[0] = '\0';
 
 	err = 0;
 	while ((ch = getopt_long_only(argc, argv, "", lopts, NULL)) != -1) {
@@ -457,7 +442,7 @@ int main(int argc, char **argv)
 			prune++;
 			break;
 		case 'r':
-			strncpy(path, optarg, sizeof(path))[GIT_PATH_MAX-1] = '\0';
+			git_buf_set(&path, optarg, strlen(optarg) + 1);
 			break;
 		default:
 			return EXIT_FAILURE;
@@ -469,6 +454,7 @@ int main(int argc, char **argv)
 		err = gbr_re_add(&dump_context.branch_re, argv[optind++]);
 		if (err != 0) {
 			gbr_re_free(dump_context.branch_re);
+			git_buf_free(&path);
 			return err;
 		}
 		branches_limited++;
@@ -483,9 +469,10 @@ int main(int argc, char **argv)
 		prune = 0;
 	}
 
-	err = gbr_repo_open(&repo, path, sizeof(path));
+	err = gbr_repo_open(&repo, &path);
 	if (err != 0) {
 		gbr_perror("gbr_repo_open()");
+		git_buf_free(&path);
 		return err;
 	}
 
@@ -497,5 +484,6 @@ int main(int argc, char **argv)
 
 	git_repository_free(repo);
 	gbr_re_free(dump_context.branch_re);
+	git_buf_free(&path);
 	return err;
 }
