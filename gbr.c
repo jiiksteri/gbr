@@ -305,17 +305,10 @@ static void gbr_for_each_remote(git_repository *repo,
 }
 
 
-static int dump_branch(const char *name, git_branch_t type, void *_ctx)
+static int dump_branch(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 {
 	struct gbr_sha sha;
-	struct gbr_dump_context *ctx = _ctx;
 	int err;
-
-	if (ctx->branch_re != NULL && gbr_re_match(ctx->branch_re, name) != 0) {
-		return 0;
-	}
-
-	printf("%s", name);
 
 	ctx->local_name = name;
 	ctx->uptodate_remotes = 0;
@@ -345,9 +338,9 @@ static void dump_version(void)
 	       major, minor, rev);
 }
 
-typedef int (*gbr_command_fn)(const char *name, git_branch_t type, void *cb_data);
+typedef int (*gbr_command_fn)(const char *name, git_branch_t type, struct gbr_dump_context *ctx);
 
-static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_command_fn cb, void *cb_data)
+static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_command_fn cb, struct gbr_dump_context *cb_data)
 {
 	git_branch_iterator *iter;
 	git_reference *ref;
@@ -363,7 +356,11 @@ static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_comma
 		if ((err = git_branch_name(&name, ref)) != 0) {
 			break;
 		}
-		err = cb(name, type, cb_data);
+
+		if (cb_data->branch_re == NULL || gbr_re_match(cb_data->branch_re, name) == 0) {
+			printf("%s", name);
+			err = cb(name, type, cb_data);
+		}
 	}
 
 	if (iter != NULL) {
