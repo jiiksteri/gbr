@@ -345,8 +345,9 @@ static void dump_version(void)
 	       major, minor, rev);
 }
 
+typedef int (*gbr_command_fn)(const char *name, git_branch_t type, void *cb_data);
 
-static int gbr_branch_foreach(git_repository *repo, git_branch_t type, int (*cb)(const char *name, git_branch_t type, void *cb_data), void *cb_data)
+static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_command_fn cb, void *cb_data)
 {
 	git_branch_iterator *iter;
 	git_reference *ref;
@@ -414,11 +415,13 @@ int main(int argc, char **argv)
 {
 	git_buf path = { .ptr = NULL };
 	git_repository *repo;
+	gbr_command_fn command;
 	struct gbr_dump_context dump_context;
 	int err;
 	int ch, n;
 	int branches_limited;
 
+	command = dump_branch;
 	memset(&dump_context, 0, sizeof(dump_context));
 
 	err = 0;
@@ -477,7 +480,7 @@ int main(int argc, char **argv)
 	}
 
 	dump_context.repo = repo;
-	err = gbr_branch_foreach(repo, GIT_BRANCH_LOCAL, dump_branch, &dump_context);
+	err = gbr_branch_foreach(repo, GIT_BRANCH_LOCAL, command, &dump_context);
 	if (err != 0) {
 		gbr_perror("git_branch_foreach()");
 	}
