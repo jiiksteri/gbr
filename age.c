@@ -70,6 +70,8 @@ int gbr_age(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 		ctx->cleanup = dump_sorted;
 	}
 
+	printf("%s", name);
+
 	err = git_revparse_single(&head, ctx->repo, name);
 	if (err == 0) {
 		dump_date(ctx, head);

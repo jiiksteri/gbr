@@ -299,6 +299,8 @@ static int dump_branch(const char *name, git_branch_t type, struct gbr_dump_cont
 	struct gbr_sha sha;
 	int err;
 
+	printf("%s", name);
+
 	ctx->local_name = name;
 	ctx->uptodate_remotes = 0;
 	err = git_revparse_single(&ctx->local_obj, ctx->repo, name);
@@ -347,7 +349,6 @@ static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_comma
 		}
 
 		if (cb_data->branch_re == NULL || gbr_re_match(cb_data->branch_re, name) == 0) {
-			printf("%s", name);
 			err = cb(name, type, cb_data);
 		}
 	}
