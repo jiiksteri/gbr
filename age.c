@@ -51,10 +51,24 @@ static void dump_date(git_repository *repo, git_object *obj)
 }
 
 
+static void dump_sorted(struct gbr_dump_context *ctx)
+{
+	/*
+	 * XXX: dump the collected list and free the related
+	 * structures
+	 */
+}
+
+
+
 int gbr_age(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 {
 	git_object *head;
 	int err;
+
+	if (ctx->cleanup == NULL) {
+		ctx->cleanup = dump_sorted;
+	}
 
 	err = git_revparse_single(&head, ctx->repo, name);
 	if (err == 0) {

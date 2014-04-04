@@ -12,9 +12,15 @@ struct gbr_dump_context {
 	git_repository *repo;
 	struct gbr_re *branch_re;
 
+	/* Command-specific cleanup after all iterations */
+	void (*cleanup)(struct gbr_dump_context *ctx);
+
+
+	/* for normal operation (ie dump remote status */
 	struct git_object *local_obj;
 	const char *local_name;
 	int uptodate_remotes;
+
 };
 
 #endif

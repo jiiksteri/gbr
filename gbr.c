@@ -352,6 +352,10 @@ static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_comma
 		}
 	}
 
+	if (cb_data->cleanup) {
+		cb_data->cleanup(cb_data);
+	}
+
 	if (iter != NULL) {
 		git_branch_iterator_free(iter);
 	}
