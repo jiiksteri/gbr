@@ -1,5 +1,5 @@
 PROG = gbr
-OBJS = color.o re.o gbr.o
+OBJS = color.o re.o age.o gbr.o
 
 # If you have a sane libgit2 install you should drop the
 # hand-coded prefix + -rpath trickery below.

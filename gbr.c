@@ -11,24 +11,13 @@
 
 #include "color.h"
 #include "re.h"
+#include "gbr.h"
+#include "age.h"
 
 #define HOPELESSLY_DIVERGED 100
 
 static int abbrev_commit = 8;
 static int prune;
-
-struct gbr_dump_context {
-	git_repository *repo;
-	struct gbr_re *branch_re;
-
-	struct git_object *local_obj;
-	const char *local_name;
-	int uptodate_remotes;
-};
-
-struct gbr_sha {
-	char sha[GIT_OID_HEXSZ+1];
-};
 
 static int gbr_repo_open(git_repository **repo, git_buf *path)
 {
@@ -388,6 +377,12 @@ static struct option lopts[] = {
 		.val = 'a'
 	},
 	{
+		.name = "age",
+		.has_arg = no_argument,
+		.flag = NULL,
+		.val = 'g',
+	},
+	{
 		.name = "prune",
 		.has_arg = no_argument,
 		.flag = NULL,
@@ -443,6 +438,9 @@ int main(int argc, char **argv)
 			break;
 		case 'r':
 			git_buf_set(&path, optarg, strlen(optarg) + 1);
+			break;
+		case 'g':
+			command = gbr_age;
 			break;
 		default:
 			return EXIT_FAILURE;
