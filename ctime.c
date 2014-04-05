@@ -16,7 +16,7 @@ char *gbr_ctime_commit(char *buf, int sz, git_commit *commit)
 	 * git_time_t is 64bits but we'll have bigger
 	 * issues if it overflows regular time_t
 	 */
-	buf[len = strftime(buf, sz, "%c", localtime_r(&ts, &tm))] = '\0';
+	buf[len = strftime(buf, sz, "%F %H:%M:%S %z", localtime_r(&ts, &tm))] = '\0';
 	if (len == 0) {
 		snprintf(buf, sz, "%s", strerror(errno));
 	}
