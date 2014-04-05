@@ -5,31 +5,11 @@
 #include <stdio.h>
 #include <git2.h>
 
-static void dump_commit_date(git_repository *repo, const char *name, const git_oid *oid)
-{
-	char tbuf[32];
-	git_commit *commit;
-	int err;
-
-	err = git_commit_lookup(&commit, repo, oid);
-	if (err == 0) {
-		printf("%s %s", gbr_ctime_commit(tbuf, sizeof(tbuf), commit), name);
-		git_commit_free(commit);
-	} else {
-		printf("%s: %s", name, giterr_last()->message);
-	}
-}
-
 static void dump_date(git_repository *repo, const char *name, git_object *obj)
 {
-	switch (git_object_type(obj)) {
-	case GIT_OBJ_COMMIT:
-		dump_commit_date(repo, name, git_object_id(obj));
-		break;
-	default:
-		printf(" unsupported object: %s", git_object_type2string(git_object_type(obj)));
-		break;
-	}
+	char tbuf[32];
+
+	printf("%s %s", gbr_ctime_object(tbuf, sizeof(tbuf), obj), name);
 
 	printf("\n");
 }
