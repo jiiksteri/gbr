@@ -21,7 +21,7 @@ static const char *gbr_ctime(char *buf, size_t sz, git_time_t *ts)
 	return buf;
 }
 
-static void dump_commit_date(struct gbr_dump_context *ctx, const git_oid *oid)
+static void dump_commit_date(struct gbr_dump_context *ctx, const char *name, const git_oid *oid)
 {
 	char tbuf[32];
 	git_commit *commit;
@@ -31,18 +31,18 @@ static void dump_commit_date(struct gbr_dump_context *ctx, const git_oid *oid)
 	err = git_commit_lookup(&commit, ctx->repo, oid);
 	if (err == 0) {
 		ts = git_commit_time(commit);
-		printf("    %s %ld", gbr_ctime(tbuf, sizeof(tbuf), &ts), ts);
+		printf("%s %s", gbr_ctime(tbuf, sizeof(tbuf), &ts), name);
 		git_commit_free(commit);
 	} else {
-		printf(" %s", giterr_last()->message);
+		printf("%s: %s", name, giterr_last()->message);
 	}
 }
 
-static void dump_date(struct gbr_dump_context *ctx, git_object *obj)
+static void dump_date(struct gbr_dump_context *ctx, const char *name, git_object *obj)
 {
 	switch (git_object_type(obj)) {
 	case GIT_OBJ_COMMIT:
-		dump_commit_date(ctx, git_object_id(obj));
+		dump_commit_date(ctx, name, git_object_id(obj));
 		break;
 	default:
 		printf(" unsupported object: %s", git_object_type2string(git_object_type(obj)));
@@ -70,13 +70,11 @@ int gbr_age(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 		ctx->cleanup = dump_sorted;
 	}
 
-	printf("%s", name);
-
 	err = git_revparse_single(&head, ctx->repo, name);
 	if (err == 0) {
-		dump_date(ctx, head);
+		dump_date(ctx, name, head);
 	} else {
-		printf(" %s", giterr_last()->message);
+		printf("%s %s", name, giterr_last()->message);
 	}
 	printf("\n");
 
