@@ -11,24 +11,13 @@
 
 #include "color.h"
 #include "re.h"
+#include "gbr.h"
+#include "age.h"
 
 #define HOPELESSLY_DIVERGED 100
 
 static int abbrev_commit = 8;
 static int prune;
-
-struct gbr_dump_context {
-	git_repository *repo;
-	struct gbr_re *branch_re;
-
-	struct git_object *local_obj;
-	const char *local_name;
-	int uptodate_remotes;
-};
-
-struct gbr_sha {
-	char sha[GIT_OID_HEXSZ+1];
-};
 
 static int gbr_repo_open(git_repository **repo, git_buf *path)
 {
@@ -305,15 +294,10 @@ static void gbr_for_each_remote(git_repository *repo,
 }
 
 
-static int dump_branch(const char *name, git_branch_t type, void *_ctx)
+static int dump_branch(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 {
 	struct gbr_sha sha;
-	struct gbr_dump_context *ctx = _ctx;
 	int err;
-
-	if (ctx->branch_re != NULL && gbr_re_match(ctx->branch_re, name) != 0) {
-		return 0;
-	}
 
 	printf("%s", name);
 
@@ -345,8 +329,9 @@ static void dump_version(void)
 	       major, minor, rev);
 }
 
+typedef int (*gbr_command_fn)(const char *name, git_branch_t type, struct gbr_dump_context *ctx);
 
-static int gbr_branch_foreach(git_repository *repo, git_branch_t type, int (*cb)(const char *name, git_branch_t type, void *cb_data), void *cb_data)
+static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_command_fn cb, struct gbr_dump_context *cb_data)
 {
 	git_branch_iterator *iter;
 	git_reference *ref;
@@ -362,7 +347,14 @@ static int gbr_branch_foreach(git_repository *repo, git_branch_t type, int (*cb)
 		if ((err = git_branch_name(&name, ref)) != 0) {
 			break;
 		}
-		err = cb(name, type, cb_data);
+
+		if (cb_data->branch_re == NULL || gbr_re_match(cb_data->branch_re, name) == 0) {
+			err = cb(name, type, cb_data);
+		}
+	}
+
+	if (cb_data->cleanup) {
+		cb_data->cleanup(cb_data);
 	}
 
 	if (iter != NULL) {
@@ -390,6 +382,12 @@ static struct option lopts[] = {
 		.val = 'a'
 	},
 	{
+		.name = "age",
+		.has_arg = no_argument,
+		.flag = NULL,
+		.val = 'g',
+	},
+	{
 		.name = "prune",
 		.has_arg = no_argument,
 		.flag = NULL,
@@ -414,11 +412,13 @@ int main(int argc, char **argv)
 {
 	git_buf path = { .ptr = NULL };
 	git_repository *repo;
+	gbr_command_fn command;
 	struct gbr_dump_context dump_context;
 	int err;
 	int ch, n;
 	int branches_limited;
 
+	command = dump_branch;
 	memset(&dump_context, 0, sizeof(dump_context));
 
 	err = 0;
@@ -443,6 +443,9 @@ int main(int argc, char **argv)
 			break;
 		case 'r':
 			git_buf_set(&path, optarg, strlen(optarg) + 1);
+			break;
+		case 'g':
+			command = gbr_age;
 			break;
 		default:
 			return EXIT_FAILURE;
@@ -477,13 +480,16 @@ int main(int argc, char **argv)
 	}
 
 	dump_context.repo = repo;
-	err = gbr_branch_foreach(repo, GIT_BRANCH_LOCAL, dump_branch, &dump_context);
+	err = gbr_branch_foreach(repo, GIT_BRANCH_LOCAL, command, &dump_context);
 	if (err != 0) {
 		gbr_perror("git_branch_foreach()");
 	}
 
 	git_repository_free(repo);
 	gbr_re_free(dump_context.branch_re);
+	if (dump_context.branch_tree) {
+		gbr_branch_tree_destroy(dump_context.branch_tree);
+	}
 	git_buf_free(&path);
 	return err;
 }
