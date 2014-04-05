@@ -35,13 +35,9 @@ static int ensure_tree(struct gbr_branch_tree **rootp)
 static git_time_t commit_date(git_repository *repo, git_object *object)
 {
 	git_time_t ts = 0;
-	git_commit *commit;
 
 	if (git_object_type(object) == GIT_OBJ_COMMIT) {
-		if (git_commit_lookup(&commit, repo, git_object_id(object)) == 0) {
-			ts = git_commit_time(commit);
-			git_commit_free(commit);
-		}
+		ts = git_commit_time((git_commit *)object);
 	}
 
 	return ts;
