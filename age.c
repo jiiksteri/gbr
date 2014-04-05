@@ -1,37 +1,19 @@
 
 #include "gbr.h"
 #include "age.h"
+#include "ctime.h"
 #include <stdio.h>
-#include <errno.h>
-#include <string.h>
 #include <git2.h>
-
-static const char *gbr_ctime(char *buf, size_t sz, git_time_t *ts)
-{
-	struct tm tm;
-	size_t len;
-	/*
-	 * git_time_t is 64bits but we'll have bigger
-	 * issues if it overflows regular time_t
-	 */
-	buf[len = strftime(buf, sz, "%c", localtime_r(ts, &tm))] = '\0';
-	if (len == 0) {
-		snprintf(buf, sz, "%s", strerror(errno));
-	}
-	return buf;
-}
 
 static void dump_commit_date(git_repository *repo, const char *name, const git_oid *oid)
 {
 	char tbuf[32];
 	git_commit *commit;
-	git_time_t ts;
 	int err;
 
 	err = git_commit_lookup(&commit, repo, oid);
 	if (err == 0) {
-		ts = git_commit_time(commit);
-		printf("%s %s", gbr_ctime(tbuf, sizeof(tbuf), &ts), name);
+		printf("%s %s", gbr_ctime_commit(tbuf, sizeof(tbuf), commit), name);
 		git_commit_free(commit);
 	} else {
 		printf("%s: %s", name, giterr_last()->message);
