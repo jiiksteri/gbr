@@ -40,6 +40,10 @@ function get_sha() {
     do_git log -1 --oneline --no-abbrev-commit $1 --|awk '{print $1}';
 }
 
+function get_commit_date() {
+    do_git log -1 --pretty=format:%ci $1
+}
+
 do_git checkout -b a;
 
 # Both up-to-date
@@ -49,7 +53,8 @@ do_git commit $QUIET -m 'a';
 do_git push $QUIET remote a:a
 do_git branch $QUIET --set-upstream-to remote/a a;
 head=$(get_sha HEAD);
-expected="a $head remote:$head:0/0";
+ts=$(get_commit_date HEAD);
+expected="$ts a $head remote:$head:0/0";
 actual=$(gbr)
 [ "$actual" = "$expected" ] || die "$actual != $expected";
 green Both up-to-date OK
@@ -61,8 +66,9 @@ echo "aa" >> a;
 do_git add a;
 do_git commit $QUIET -m 'aa';
 head=$(get_sha b);
+ts=$(get_commit_date b)
 remote_head=$(get_sha remote/b);
-expected="b $head remote:$remote_head:1/0"
+expected="$ts b $head remote:$remote_head:1/0"
 actual=$(gbr b);
 [ "$actual" = "$expected" ] || die "$actual != $expected";
 green Local ahead OK OK
@@ -72,8 +78,9 @@ do_git fetch remote;
 do_git push $QUIET remote b:a;
 do_git checkout $QUIET a;
 head=$(get_sha a);
+ts=$(get_commit_date refs/heads/a)
 remote_head=$(get_sha remote/a);
-expected="a $head remote:$remote_head:0/1"
+expected="$ts a $head remote:$remote_head:0/1"
 actual=$(gbr a);
 #echo $actual;
 [ "$actual" = "$expected" ] || die "$actual != $expected";

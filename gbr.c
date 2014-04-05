@@ -13,6 +13,7 @@
 #include "re.h"
 #include "gbr.h"
 #include "age.h"
+#include "ctime.h"
 
 #define HOPELESSLY_DIVERGED 100
 
@@ -296,20 +297,22 @@ static void gbr_for_each_remote(git_repository *repo,
 
 static int dump_branch(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 {
+	char tbuf[32];
 	struct gbr_sha sha;
 	int err;
-
-	printf("%s", name);
 
 	ctx->local_name = name;
 	ctx->uptodate_remotes = 0;
 	err = git_revparse_single(&ctx->local_obj, ctx->repo, name);
 	if (err == 0) {
-		printf(" %s", gbr_sha(&sha, git_object_id(ctx->local_obj)));
+		printf("%s %s %s",
+		       gbr_ctime_object(tbuf, sizeof(tbuf), ctx->local_obj),
+		       name,
+		       gbr_sha(&sha, git_object_id(ctx->local_obj)));
 		gbr_for_each_remote(ctx->repo, dump_matching_branch, ctx);
 		git_object_free(ctx->local_obj);
 	} else {
-		printf(" ERROR [%d] %s", err, giterr_last()->message);
+		printf("%s ERROR [%d] %s", name, err, giterr_last()->message);
 	}
 
 	printf("\n");

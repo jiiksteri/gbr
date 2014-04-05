@@ -5,13 +5,11 @@
 #include <string.h>
 #include <errno.h>
 
-char *gbr_ctime_commit(char *buf, int sz, git_commit *commit)
+static char *ctime_ts(char *buf, int sz, git_time_t ts)
 {
 	struct tm tm;
-	git_time_t ts;
 	size_t len;
 
-	ts = git_commit_time(commit);
 	/*
 	 * git_time_t is 64bits but we'll have bigger
 	 * issues if it overflows regular time_t
@@ -21,4 +19,26 @@ char *gbr_ctime_commit(char *buf, int sz, git_commit *commit)
 		snprintf(buf, sz, "%s", strerror(errno));
 	}
 	return buf;
+
+}
+
+char *gbr_ctime_commit(char *buf, int sz, git_commit *commit)
+{
+	return ctime_ts(buf, sz, git_commit_time(commit));
+}
+
+char *gbr_ctime_object(char *buf, int sz, git_object *object)
+{
+	git_time_t ts;
+
+	switch (git_object_type(object)) {
+	case GIT_OBJ_COMMIT:
+		ts = git_commit_time((git_commit *)object);
+		break;
+	default:
+		ts = 0;
+		break;
+	}
+
+	return ctime_ts(buf, sz, ts);
 }
