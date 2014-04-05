@@ -48,6 +48,8 @@ static void dump_date(git_repository *repo, const char *name, git_object *obj)
 		printf(" unsupported object: %s", git_object_type2string(git_object_type(obj)));
 		break;
 	}
+
+	printf("\n");
 }
 
 
@@ -74,9 +76,8 @@ int gbr_age(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 	if (err == 0) {
 		dump_date(ctx->repo, name, head);
 	} else {
-		printf("%s %s", name, giterr_last()->message);
+		printf("%s %s\n", name, giterr_last()->message);
 	}
-	printf("\n");
 
 	return err;
 }
