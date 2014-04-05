@@ -55,10 +55,9 @@ static void dump_date(git_repository *repo, const char *name, git_object *obj)
 
 static void dump_sorted(struct gbr_dump_context *ctx)
 {
-	/*
-	 * XXX: dump the collected list and free the related
-	 * structures
-	 */
+	if (ctx->branch_tree) {
+		gbr_branch_tree_walk(ctx->branch_tree, dump_date);
+	}
 }
 
 
@@ -74,7 +73,7 @@ int gbr_age(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 
 	err = git_revparse_single(&head, ctx->repo, name);
 	if (err == 0) {
-		dump_date(ctx->repo, name, head);
+		gbr_branch_tree_add(&ctx->branch_tree, ctx->repo, name, head);
 	} else {
 		printf("%s %s\n", name, giterr_last()->message);
 	}

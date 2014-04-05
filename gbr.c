@@ -487,6 +487,9 @@ int main(int argc, char **argv)
 
 	git_repository_free(repo);
 	gbr_re_free(dump_context.branch_re);
+	if (dump_context.branch_tree) {
+		gbr_branch_tree_destroy(dump_context.branch_tree);
+	}
 	git_buf_free(&path);
 	return err;
 }
