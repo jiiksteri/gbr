@@ -391,6 +391,12 @@ static struct option lopts[] = {
 		.val = 'g',
 	},
 	{
+		.name = "remote-age",
+		.has_arg = no_argument,
+		.flag = NULL,
+		.val = 'm',
+	},
+	{
 		.name = "prune",
 		.has_arg = no_argument,
 		.flag = NULL,
@@ -414,6 +420,7 @@ static struct option lopts[] = {
 int main(int argc, char **argv)
 {
 	git_buf path = { .ptr = NULL };
+	git_branch_t branch_type;
 	git_repository *repo;
 	gbr_command_fn command;
 	struct gbr_dump_context dump_context;
@@ -422,6 +429,7 @@ int main(int argc, char **argv)
 	int branches_limited;
 
 	command = dump_branch;
+	branch_type = GIT_BRANCH_LOCAL;
 	memset(&dump_context, 0, sizeof(dump_context));
 
 	err = 0;
@@ -447,6 +455,8 @@ int main(int argc, char **argv)
 		case 'r':
 			git_buf_set(&path, optarg, strlen(optarg) + 1);
 			break;
+		case 'm':
+			branch_type = GIT_BRANCH_REMOTE;
 		case 'g':
 			command = gbr_age;
 			break;
@@ -483,7 +493,7 @@ int main(int argc, char **argv)
 	}
 
 	dump_context.repo = repo;
-	err = gbr_branch_foreach(repo, GIT_BRANCH_LOCAL, command, &dump_context);
+	err = gbr_branch_foreach(repo, branch_type, command, &dump_context);
 	if (err != 0) {
 		gbr_perror("git_branch_foreach()");
 	}
