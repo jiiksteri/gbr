@@ -87,6 +87,7 @@ static void node_destroy(void *_node)
 void gbr_branch_tree_destroy(struct gbr_branch_tree *tree)
 {
 	tdestroy(tree->root, node_destroy);
+	free(tree);
 }
 
 static void walk_cb(const void *nodep, const VISIT visit, const int depth)
