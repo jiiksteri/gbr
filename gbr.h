@@ -28,6 +28,10 @@ struct gbr_dump_context {
 	const char *local_name;
 	int uptodate_remotes;
 
+	/* Should we prune local branches that are up-to-date
+	 * wrt remotes.
+	 */
+	int prune;
 };
 
 #endif

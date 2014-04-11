@@ -17,8 +17,6 @@
 
 #define HOPELESSLY_DIVERGED 100
 
-static int prune;
-
 static int gbr_repo_open(git_repository **repo, git_buf *path)
 {
 	int err;
@@ -316,7 +314,7 @@ static int dump_branch(const char *name, git_branch_t type, struct gbr_dump_cont
 
 	printf("\n");
 
-	if (prune && ctx->uptodate_remotes > 0) {
+	if (ctx->prune && ctx->uptodate_remotes > 0) {
 		do_prune(ctx->repo, name);
 	}
 
@@ -450,7 +448,7 @@ int main(int argc, char **argv)
 			return 0;
 			break;
 		case 'p':
-			prune++;
+			dump_context.prune++;
 			break;
 		case 'r':
 			git_buf_set(&path, optarg, strlen(optarg) + 1);
@@ -480,9 +478,9 @@ int main(int argc, char **argv)
 	 * Don't allow pruning unless there's a branch-limiting regexp.
 	 * This is just a safety measure.
 	 */
-	if (prune > 0 && branches_limited == 0) {
+	if (dump_context.prune > 0 && branches_limited == 0) {
 		fprintf(stderr, "Ignoring --prune as branches are not limited\n");
-		prune = 0;
+		dump_context.prune = 0;
 	}
 
 	err = gbr_repo_open(&repo, &path);
