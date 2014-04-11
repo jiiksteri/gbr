@@ -17,7 +17,6 @@
 
 #define HOPELESSLY_DIVERGED 100
 
-static int abbrev_commit = 8;
 static int prune;
 
 static int gbr_repo_open(git_repository **repo, git_buf *path)
@@ -39,7 +38,7 @@ static void gbr_perror(const char *prefix)
 	fprintf(stderr, "%s: %s\n", prefix, giterr_last()->message);
 }
 
-static const char *gbr_sha(struct gbr_sha *sha, const git_oid *oid)
+static const char *gbr_sha(struct gbr_sha *sha, const git_oid *oid, int abbrev_commit)
 {
 	return git_oid_tostr(sha->sha, abbrev_commit+1, oid);
 }
@@ -210,7 +209,7 @@ static void do_walk(struct gbr_dump_context *dump_ctx,
 
 	if (git_oid_cmp(o1, o2) == 0) {
 		/* Skip the costly walking */
-		dump_info(remote, gbr_sha(&sha, o2), 0, 0);
+		dump_info(remote, gbr_sha(&sha, o2, dump_ctx->abbrev), 0, 0);
 		dump_ctx->uptodate_remotes++;
 		return;
 	}
@@ -228,7 +227,7 @@ static void do_walk(struct gbr_dump_context *dump_ctx,
 		;
 	}
 
-	dump_info(remote, gbr_sha(&sha, o2),
+	dump_info(remote, gbr_sha(&sha, o2, dump_ctx->abbrev),
 		  ctx->count[0], ctx->count[1]);
 
 	gbr_walk_free(ctx);
@@ -308,7 +307,7 @@ static int dump_branch(const char *name, git_branch_t type, struct gbr_dump_cont
 		printf("%s %s %s",
 		       gbr_ctime_object(tbuf, sizeof(tbuf), ctx->local_obj),
 		       name,
-		       gbr_sha(&sha, git_object_id(ctx->local_obj)));
+		       gbr_sha(&sha, git_object_id(ctx->local_obj), ctx->abbrev));
 		gbr_for_each_remote(ctx->repo, dump_matching_branch, ctx);
 		git_object_free(ctx->local_obj);
 	} else {
@@ -431,6 +430,7 @@ int main(int argc, char **argv)
 	command = dump_branch;
 	branch_type = GIT_BRANCH_LOCAL;
 	memset(&dump_context, 0, sizeof(dump_context));
+	dump_context.abbrev = 8;
 
 	err = 0;
 	while ((ch = getopt_long_only(argc, argv, "", lopts, NULL)) != -1) {
@@ -443,7 +443,7 @@ int main(int argc, char **argv)
 			if (n > GIT_OID_HEXSZ) {
 				n = GIT_OID_HEXSZ;
 			}
-			abbrev_commit = n;
+			dump_context.abbrev = n;
 			break;
 		case 'v':
 			dump_version();

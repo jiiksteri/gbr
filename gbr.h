@@ -13,6 +13,9 @@ struct gbr_dump_context {
 	git_repository *repo;
 	struct gbr_re *branch_re;
 
+	/* SHA hash length for gbr_sha() */
+	int abbrev;
+
 	/* Command-specific cleanup after all iterations */
 	void (*cleanup)(struct gbr_dump_context *ctx);
 
