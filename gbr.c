@@ -14,6 +14,7 @@
 #include "gbr.h"
 #include "age.h"
 #include "ctime.h"
+#include "perror.h"
 
 #define HOPELESSLY_DIVERGED 100
 
@@ -29,11 +30,6 @@ static int gbr_repo_open(git_repository **repo, git_buf *path)
 	}
 
 	return git_repository_open(repo, path->ptr);
-}
-
-static void gbr_perror(const char *prefix)
-{
-	fprintf(stderr, "%s: %s\n", prefix, giterr_last()->message);
 }
 
 static const char *gbr_sha(struct gbr_sha *sha, const git_oid *oid, int abbrev_commit)
