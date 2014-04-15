@@ -53,6 +53,7 @@ static int compare_node(const void *_n1, const void *_n2)
 int gbr_branch_tree_add(struct gbr_branch_tree **rootp, git_repository *repo, const char *branch, git_object *object)
 {
 	struct node *node;
+	struct node **stored;
 	int err;
 
 	if ((err = ensure_tree(rootp)) != 0) {
@@ -67,11 +68,23 @@ int gbr_branch_tree_add(struct gbr_branch_tree **rootp, git_repository *repo, co
 
 	node->object = object;
 	node->commit_date = commit_date(repo, object);
-	node->repo = repo;
-	node->branch = strdup(branch);
 
-	tsearch(node, &(*rootp)->root, compare_node);
-	node->tree = *rootp;
+	stored = tsearch(node, &(*rootp)->root, compare_node);
+	if (stored != NULL && *stored == node) {
+		node->repo = repo;
+		node->branch = strdup(branch);
+		node->tree = *rootp;
+	} else {
+		/* This object was not added as it was already there
+		 * or an error happened. The caller expects us us to
+		 * own the object they passed in and free it at
+		 * dump_context->cleanup(). But as we didn't add it,
+		 * free it here to avoid a leak.
+		 */
+		git_object_free(object);
+
+		free(node);
+	}
 
 	return 0;
 }
