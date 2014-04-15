@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <git2.h>
 
-static void dump_date(git_repository *repo, const char *name, git_object *obj)
+static void dump_date(const char *name, git_object *obj)
 {
 	char tbuf[32];
 
@@ -35,7 +35,7 @@ int gbr_age(const char *name, git_branch_t type, struct gbr_dump_context *ctx)
 
 	err = git_revparse_single(&head, ctx->repo, name);
 	if (err == 0) {
-		gbr_branch_tree_add(&ctx->branch_tree, ctx->repo, name, head);
+		gbr_branch_tree_add(&ctx->branch_tree, name, head);
 	} else {
 		printf("%s %s\n", name, giterr_last()->message);
 	}

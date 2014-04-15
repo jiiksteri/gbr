@@ -5,9 +5,9 @@
 
 struct gbr_branch_tree;
 
-typedef void (*gbr_branch_visit_fn)(git_repository *repo, const char *name, git_object *obj);
+typedef void (*gbr_branch_visit_fn)(const char *name, git_object *obj);
 
-int gbr_branch_tree_add(struct gbr_branch_tree **treep, git_repository *repo, const char *branch, git_object *object);
+int gbr_branch_tree_add(struct gbr_branch_tree **treep, const char *branch, git_object *object);
 
 void gbr_branch_tree_destroy(struct gbr_branch_tree *tree);
 

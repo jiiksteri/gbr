@@ -12,7 +12,6 @@ struct gbr_branch_tree {
 
 struct node {
 	struct gbr_branch_tree *tree;
-	git_repository *repo;
 
 	git_object *object;
 	git_time_t commit_date;
@@ -32,7 +31,7 @@ static int ensure_tree(struct gbr_branch_tree **rootp)
 	return 0;
 }
 
-static git_time_t commit_date(git_repository *repo, git_object *object)
+static git_time_t commit_date(git_object *object)
 {
 	git_time_t ts = 0;
 
@@ -50,7 +49,7 @@ static int compare_node(const void *_n1, const void *_n2)
 	return n2->commit_date - n1->commit_date;
 }
 
-int gbr_branch_tree_add(struct gbr_branch_tree **rootp, git_repository *repo, const char *branch, git_object *object)
+int gbr_branch_tree_add(struct gbr_branch_tree **rootp, const char *branch, git_object *object)
 {
 	struct node *node;
 	struct node **stored;
@@ -67,11 +66,10 @@ int gbr_branch_tree_add(struct gbr_branch_tree **rootp, git_repository *repo, co
 	memset(node, 0, sizeof(*node));
 
 	node->object = object;
-	node->commit_date = commit_date(repo, object);
+	node->commit_date = commit_date(object);
 
 	stored = tsearch(node, &(*rootp)->root, compare_node);
 	if (stored != NULL && *stored == node) {
-		node->repo = repo;
 		node->branch = strdup(branch);
 		node->tree = *rootp;
 	} else {
@@ -110,7 +108,7 @@ static void walk_cb(const void *nodep, const VISIT visit, const int depth)
 	switch (visit) {
 	case leaf:
 	case postorder:
-		node->tree->visit(node->repo, node->branch, node->object);
+		node->tree->visit(node->branch, node->object);
 		break;
 	default:
 		break;
