@@ -45,6 +45,7 @@ static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_comma
 	int err;
 
 	iter = NULL;
+	ref = NULL;
 	err = git_branch_iterator_new(&iter, repo, type);
 	while (err == 0) {
 		if ((err = git_branch_next(&ref, &type, iter)) != 0) {
@@ -56,11 +57,17 @@ static int gbr_branch_foreach(git_repository *repo, git_branch_t type, gbr_comma
 
 		if (cb_data->branch_re == NULL || gbr_re_match(cb_data->branch_re, name) == 0) {
 			err = cb(name, type, cb_data);
+			git_reference_free(ref);
+			ref = NULL;
 		}
 	}
 
 	if (cb_data->cleanup) {
 		cb_data->cleanup(cb_data);
+	}
+
+	if (ref != NULL) {
+		git_reference_free(ref);
 	}
 
 	if (iter != NULL) {
