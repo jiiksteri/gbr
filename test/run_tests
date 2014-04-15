@@ -10,8 +10,8 @@ fi
 
 QUIET=-q
 
-repo=$(mktemp --tmpdir --directory gbr.tmp.XXXXXXXXXX);
-remote=$(mktemp --tmpdir --directory gbr.tmp.XXXXXXXXXX);
+repo=$(mktemp -d gbr.tmp.XXXXXXXXXX);
+remote=$(mktemp -d gbr.tmp.XXXXXXXXXX);
 
 trap "rm -rf $repo $remote a" EXIT;
 
